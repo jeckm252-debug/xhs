@@ -6,15 +6,21 @@ on:
 jobs:
   build:
     runs-on: macos-14
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Unzip source
+      - name: Prepare source
         run: |
-          ZIP=$(ls *.zip | head -1)
-          echo "Using $ZIP"
-          unzip -o "$ZIP" -d src
+          if [ -f Tweak.m ]; then
+            mkdir -p src && cp Tweak.m src/
+          else
+            ZIP=$(ls *.zip | head -1)
+            echo "Using $ZIP"
+            unzip -o "$ZIP" -d src
+          fi
           find src -name "Tweak.m"
 
       - name: Build dylib (arm64 + arm64e)
@@ -29,8 +35,15 @@ jobs:
             -install_name @rpath/XHSLiquidGlass.dylib
           file XHSLiquidGlass.dylib
 
-      - name: Upload dylib
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: XHSLiquidGlass-dylib
           path: XHSLiquidGlass.dylib
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          files: XHSLiquidGlass.dylib
