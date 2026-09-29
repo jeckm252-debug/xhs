@@ -1,0 +1,36 @@
+name: Build XHSLiquidGlass.dylib
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unzip source
+        run: |
+          ZIP=$(ls *.zip | head -1)
+          echo "Using $ZIP"
+          unzip -o "$ZIP" -d src
+          find src -name "Tweak.m"
+
+      - name: Build dylib (arm64 + arm64e)
+        run: |
+          TWEAK=$(find src -name "Tweak.m" | head -1)
+          echo "Building $TWEAK"
+          xcrun -sdk iphoneos clang -arch arm64 -arch arm64e \
+            -mios-version-min=14.0 \
+            -fobjc-arc -O2 -dynamiclib \
+            "$TWEAK" -o XHSLiquidGlass.dylib \
+            -framework UIKit -framework Foundation -framework QuartzCore -framework CoreGraphics \
+            -install_name @rpath/XHSLiquidGlass.dylib
+          file XHSLiquidGlass.dylib
+
+      - name: Upload dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: XHSLiquidGlass-dylib
+          path: XHSLiquidGlass.dylib
